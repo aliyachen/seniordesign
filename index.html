@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Layout Synthesis</title>
+    <style>
+      html, body {
+        margin: 0;
+        overflow: hidden;
+      }
+      #c {
+        width: 100%;
+        height: 100%;
+        display: block;
+      }
+
+      #container {
+        position: relative;
+        width: 100vw;
+        height: 100vh;
+        overflow: hidden;
+      } 
+
+      /*BEGIN selection for objects*/
+      .modal {
+        display: none;
+        position: fixed;
+        z-index: 1;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        overflow: auto;
+        background-color: rgb(0,0,0); /* Fallback color */
+        background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+      }
+      .modal-content {
+      background-color: #fefefe;
+      margin: 15% auto; /* 15% from the top and centered */
+      padding: 20px;
+      border: 1px solid #888;
+      width: 80%; /* Could be more or less, depending on screen size */
+      }
+
+      /* The Close Button */
+      .close {
+        color: #aaa;
+        float: right;
+        font-size: 28px;
+        font-weight: bold;
+      }
+
+      .close:hover,
+      .close:focus {
+        color: black;
+        text-decoration: none;
+        cursor: pointer;
+      }
+
+      .available_objects,
+      .selected_objects {
+        float: left;
+        width: 45%;
+
+        select {
+          height: 200px;
+          padding: 0;
+
+          option {
+            padding: 4px 10px 4px 10px;
+          }
+
+          option:hover {
+            background: #EEEEEE;
+          }
+        }
+      }
+
+/*      .select_arrows {
+        float: left;
+        width: 10%;
+
+        input {
+          width: 70%;
+          margin-bottom: 5px;
+        }
+      }*/
+      /*END selection for objects*/
+
+    </style>
+  </head>
+  <body>
+    <div id="container">
+      <canvas id="c"></canvas>
+    </div>
+    <div id="selectionModal" class="modal">
+      <div class="modal-content">
+        <span id="closeSelection" class="close">&times;</span>
+
+          <form  method="POST" name="theForm">
+            <table bgcolor="white" border="1" cellpadding="5" cellspacing="2" align="center">
+            <tr><td align="center">
+                <select name=menu1 size=10 multiple>
+                    <option>Table</option>
+                   <option>Chair</option>
+                   <option>Coffee_Table</option>
+                   <option>Single_Bed</option>
+                   <option>Desk</option>
+                   <option>Bed_Drawer</option>
+                   <option>Bookcase_Closed_Wide</option>
+                   <option>Floor_Lamp_Round</option>
+                   <option>Rug_Rounded</option>
+                   <option>Laptop_Prop</option>
+                   <option>Radio_Prop</option>
+                   <option>Table_Lamp_Round_Prop</option>
+                </select><br />
+            <div class="select_arrows">
+              <input type="button" id="btnRight" value=">" class="btn btn-default"/><br/>
+              <input type="button" id="btnAllRight" value=">>" class="btn btn-default"/><br/>
+            </div>
+            </td><td align="center">
+                <select name=menu2 size=10 multiple >
+                </select><br />
+
+             <div class="select_arrows">
+              <input type="button" id="btnLeft" value="<" class="btn btn-default"/><br/>
+              <input type="button" id="btnAllLeft" value="<<" class="btn btn-default"/>
+            </div>
+
+            </td></tr></table>
+          </form>
+          <div class="add_object">
+            <input type="button" id="addObjects" value="Add Objects" class="btn btn-default"/>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+
+
+
+
+
+    <div id="distanceInputBox" class = "modal">
+      <div class="modal-content">
+         <span id = "closeDistance" class="close">&times;</span>
+            <input type="text" id = "distanceInput" value="5">
+            <input type="button" id="applyDistance" value="Apply" class="btn btn-default"/>
+      </div>
+    </div>
+    <script src="bundle.js"></script>
+    <script src="./selectionjs.js"></script>
+  </body>
+</html>
