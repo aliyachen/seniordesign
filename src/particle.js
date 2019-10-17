@@ -35,7 +35,6 @@ class Particle {
 		this.xMax = roomX - xLimit;
 		this.xMin = (-1 * roomX) + xLimit;
 
-
 		var roomZ = 1.5; // 3 / 2
 		var zLimit = box.getSize().z / 2.0;
 		this.zMax = roomZ - zLimit;
@@ -115,6 +114,7 @@ class Particle {
 					} else {
 						z = this.zMax;
 					}
+				}
 			}
 
 			this.currentPosition = new THREE.Vector3(this.testObj.position.x, this.testObj.position.y, this.testObj.position.z);
@@ -127,14 +127,11 @@ class Particle {
 						this.resetTestPosition();
 						this.randomizePosition(objects, wall, prop);
 					}
-
 				}
 			}
-
-
 		}
-
 	}
+
 
 	resetTestPosition() {
 		this.testObj.position.x = this.currentPosition.x;
@@ -189,6 +186,7 @@ class Particle {
 		}
 	}
 }
+
 
 class PairwiseDistanceConstraint {
 	constructor(particle1, type1, particle2, type2, distance) {
