@@ -152,49 +152,43 @@ function onDocumentMouseDown( event ) {
     var obj = intersects[0].object;
     if (obj.parent.userData.clickable != undefined) {
       if (obj.parent.userData.selected == false) {
-        obj.material.color.set( 0xff0000 );
+      //  obj.material.color.set( 0xff0000 ); //UNCOMMENT??
         obj.parent.userData.selected = true;
         //add to selectedObjects list
         selectedObjects[obj.parent.userData.id] = obj;
-        console.log(obj.parent);
-        console.log("userid of selected group ob??: " + obj.parent.userData.group);
-        console.log("is it selected tho: " + obj.parent.userData.selected);
         updateSelected();
 
         //select all objects in the group
-        if (obj.parent.userData.group != undefined) {
+        if (obj.parent.userData.group >= 0) {
           scene.traverse(function(node) {
             if (node instanceof THREE.Mesh && node.parent.userData.clickable != undefined) {
-              if (node.parent.userData.group != undefined) {
+              if (node.parent.userData.group >= 0) {
                 if (node != obj && node.parent.userData.group == obj.parent.userData.group) {
-                   // console.log("node childre??" + node.material);
                     node.parent.userData.selected = true;
 
-                    //DON'T ADD TO SELECTEDOBJECTS; ADD TO DIFFERENTA RRAY COLORED OBJECTS??
                    // selectedObjects[node.parent.userData.id] = node;
                    
                     console.log("group node id??: " + node.parent.userData.group);
                     updateSelected();
 
-                    node.material.color.set(0xff0000);
+                   // node.material.color.set(0xff0000);
                 }
               }
             }
           });
         }
-        //console.log("group????: " + obj.parent.userData.group);
       } else {
-        obj.material.color.set(0xFFFFFF);
+       // obj.material.color.set(0xFFFFFF);
         obj.parent.userData.selected = false;
         delete selectedObjects[obj.parent.userData.id];
         updateSelected();
 
         //deselect all objects in the group
         //select all objects in the group
-        if (obj.parent.userData.group != undefined) {
+        if (obj.parent.userData.group >= 0) {
           scene.traverse(function(node) {
             if (node instanceof THREE.Mesh) {
-              if (node.parent.userData.group != undefined) {
+              if (node.parent.userData.group >= 0) {
                 if (node != obj && node.parent.userData.group == obj.parent.userData.group) {
                     //node.material.color.set(0xFFFFFF);
                     node.parent.userData.selected = false;
@@ -220,6 +214,7 @@ function updateSelected() {
   outlinePass.selectedObjects = selectedObjectsToOutline;
   console.log("outline??: " + outlinePass.selectedObjects.length);
 }
+
 
 export function clearSelectedObjects() {
 

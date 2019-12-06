@@ -1,7 +1,4 @@
 
-// const THREE = global.THREE = require('three'); // older modules are imported like this. You shouldn't have to worry about this much
-// require('./obj_files/pot.gltf')
-
 import * as THREE from 'three'
 import OBJLoader from 'three-obj-loader'
 OBJLoader(THREE);
@@ -24,6 +21,11 @@ var clearObjects = false;
 var groupCount = 0;
 var allGroups = {};
 var allGroupedParticles = {};
+var kitchenCabinetLower = [];
+var kitchenCabinetUpper = [];
+var kitchenCabinetUpperCornerId = -1;
+var kitchenCabinetLowerCornerRoundId = -1;
+var kitchenCabinetLowerCornerInnerId = -1;
 
 var allProps = [];
 
@@ -48,7 +50,6 @@ function getParticlesAndGroupsInScene() {
   Object.keys(allGroups).forEach(function(key) {
     allParticles.push(allGroups[key]);
   })
-  console.log(Object.keys(allObjects).length);
   return allParticles;
 }
 
@@ -65,6 +66,273 @@ function getAllParticles() {
   return allParticles;
 }
 
+
+//shuffle array
+function shuffleArray(array) {
+    for (var i = array.length - 1; i > 0; i--) {
+        var j = Math.floor(Math.random() * (i + 1));
+        var temp = array[i];
+        array[i] = array[j];
+        array[j] = temp;
+    }
+}
+
+function randomizeCabinets(scene) {
+  //delete group
+  if (kitchenCabinetLower.length + kitchenCabinetUpper.length > 1) {
+    var groupNum;
+    if (kitchenCabinetLower[0] in allGroupedParticles) {
+      groupNum = allGroupedParticles[kitchenCabinetLower[0]].obj.userData.group;
+    } else  if (kitchenCabinetUpper[0] in allGroupedParticles) {
+      groupNum = allGroupedParticles[kitchenCabinetUpper[0]].obj.userData.group;
+    }
+    Object.keys(allGroupedParticles).forEach(function(key) {
+      if (allGroupedParticles[key].obj.userData.group == groupNum) {
+        var id = allGroupedParticles[key].obj.userData.id;
+        allObjects[id] = allGroupedParticles[key];
+        allObjects[id].obj.userData.group = -1;
+      }
+    })
+
+    //delete from all grouped particles
+    for (var i = 0; i < kitchenCabinetLower.length; i++) {
+      if (kitchenCabinetLower[i] in allGroupedParticles) {
+        delete allGroupedParticles[kitchenCabinetLower[i]];
+      }
+    }
+    for (var i = 0; i < kitchenCabinetUpper.length; i++) {
+      if (kitchenCabinetUpper[i] in allGroupedParticles) {
+        delete allGroupedParticles[kitchenCabinetUpper[i]];
+      }
+    }
+    //delete from allgroups
+    delete allGroups[groupNum];
+    
+  }
+
+  shuffleArray(kitchenCabinetLower);
+  var front = 0;
+  if (kitchenCabinetLowerCornerRoundId >= 0) { //if we loaded the lower corner
+    //randomly determine if corner cabinet should be first or last; first remove it
+    var index = kitchenCabinetLower.indexOf(kitchenCabinetLowerCornerRoundId);
+    if (index > -1) {
+      kitchenCabinetLower.splice(index, 1);
+    }
+    if (Math.floor(Math.random() * 2) == 0) {
+      front = 1;
+      kitchenCabinetLower.unshift(kitchenCabinetLowerCornerRoundId);
+    } else {
+      front = 2;
+      kitchenCabinetLower.push(kitchenCabinetLowerCornerRoundId);
+    }
+  }
+  if (kitchenCabinetLowerCornerInnerId >= 0) {
+    var index = kitchenCabinetLower.indexOf(kitchenCabinetLowerCornerInnerId);
+    if (index > -1) {
+      kitchenCabinetLower.splice(index, 1);
+    }
+    if (front == 0) { //we didn't have a round corner, so choose either front or back to put the inner corner at
+      if (Math.floor(Math.random() * 2) == 0) {
+        kitchenCabinetLower.unshift(kitchenCabinetLowerCornerInnerId);
+      } else {
+        kitchenCabinetLower.push(kitchenCabinetLowerCornerInnerId);
+
+      }
+    } else if (front == 1) { //round corner was put first
+      kitchenCabinetLower.push(kitchenCabinetLowerCornerInnerId);
+    } else if (front == 2) { //round corner was last
+      kitchenCabinetLower.unshift(kitchenCabinetLowerCornerInnerId);
+    }
+  }
+  shuffleArray(kitchenCabinetUpper);
+  var frontUp = 0;
+  if (kitchenCabinetUpperCornerId >= 0) { //if we loaded the lower corner
+    //randomly determine if corner cabinet should be first or last; first remove it
+    var index = kitchenCabinetUpper.indexOf(kitchenCabinetUpperCornerId);
+    if (index > -1) {
+      kitchenCabinetUpper.splice(index, 1);
+    }
+    if (Math.floor(Math.random() * 2) == 0) {
+      frontUp = 1;
+      kitchenCabinetUpper.unshift(kitchenCabinetUpperCornerId);
+    } else {
+      frontUp = 2;
+      kitchenCabinetUpper.push(kitchenCabinetUpperCornerId);
+    }
+  }
+
+  //reposition lower; first recenter to origin
+  if (kitchenCabinetLower.length > 0) {
+    var size = allObjects[kitchenCabinetLower[0]].getBox().getSize().x;
+    for (var i = 0; i < kitchenCabinetLower.length; i++) {
+      if (kitchenCabinetLower.length > 5) {
+        allObjects[kitchenCabinetLower[i]].changePosition(-size, 0)
+      } else {
+        allObjects[kitchenCabinetLower[i]].changePosition(0, 0);
+      }
+    }
+    var dist = 0;
+    for (var i = 1; i < kitchenCabinetLower.length; i++) {
+      //usually the object's longer side is parallel to the wall
+      var add = Math.max(allObjects[kitchenCabinetLower[i-1]].getBox().getSize().x/2,allObjects[kitchenCabinetLower[i-1]].getBox().getSize().z/2);
+      var currBuffer = Math.max(allObjects[kitchenCabinetLower[i]].getBox().getSize().x/2,allObjects[kitchenCabinetLower[i]].getBox().getSize().z/2)
+      dist += add + currBuffer;
+      allObjects[kitchenCabinetLower[i]].currentPosition.x += dist;
+      allObjects[kitchenCabinetLower[i]].obj.position.x += dist;
+      allObjects[kitchenCabinetLower[i]].testObj.position.x += dist;
+      allObjects[kitchenCabinetLower[i]].target.x += dist;
+    }
+  }
+  //reposition upper; first recenter to origin, all upper cabinets move higher up
+  if (kitchenCabinetUpper.length > 0) {
+    var size = allObjects[kitchenCabinetUpper[0]].getBox().getSize().x;
+    for (var i = 0; i < kitchenCabinetUpper.length; i++) {
+      if (kitchenCabinetUpper.length > 5) {
+        allObjects[kitchenCabinetUpper[i]].changePosition(-size, 0)
+        allObjects[kitchenCabinetUpper[i]].changeY(0.5);
+      } else {
+        allObjects[kitchenCabinetUpper[i]].changePosition(0, 0);
+        allObjects[kitchenCabinetUpper[i]].changeY(0.5);
+      }
+    }
+    var dist = 0;
+    for (var i = 1; i < kitchenCabinetUpper.length; i++) {
+      //usually the object's longer side is parallel to the wall
+      var add = Math.max(allObjects[kitchenCabinetUpper[i-1]].getBox().getSize().x/2,allObjects[kitchenCabinetUpper[i-1]].getBox().getSize().z/2);
+      var currBuffer = Math.max(allObjects[kitchenCabinetUpper[i]].getBox().getSize().x/2,allObjects[kitchenCabinetUpper[i]].getBox().getSize().z/2)
+      dist += add + currBuffer;
+      allObjects[kitchenCabinetUpper[i]].currentPosition.x += dist;
+      allObjects[kitchenCabinetUpper[i]].obj.position.x += dist;
+      allObjects[kitchenCabinetUpper[i]].testObj.position.x += dist;
+      allObjects[kitchenCabinetUpper[i]].target.x += dist;
+    }
+  }
+
+
+  //grouping
+  var particlesInGroup = [];
+  if (kitchenCabinetLower.length + kitchenCabinetUpper.length > 1) {
+    for (var i = 0; i < kitchenCabinetLower.length; i++) {
+      allObjects[kitchenCabinetLower[i]].obj.userData.group = groupCount;
+      particlesInGroup.push(allObjects[kitchenCabinetLower[i]]);
+      allGroupedParticles[kitchenCabinetLower[i]] = allObjects[kitchenCabinetLower[i]]; 
+      //delete from allobjects list because it's now in a group
+      if (kitchenCabinetLower[i] in allObjects) {
+        delete allObjects[kitchenCabinetLower[i]];
+      }
+    }
+    for (var i = 0; i < kitchenCabinetUpper.length; i++) {
+      allObjects[kitchenCabinetUpper[i]].obj.userData.group = groupCount;
+      particlesInGroup.push(allObjects[kitchenCabinetUpper[i]]);
+      allGroupedParticles[kitchenCabinetUpper[i]] = allObjects[kitchenCabinetUpper[i]]; 
+      //delete from allobjects list because it's now in a group
+      if (kitchenCabinetUpper[i] in allObjects) {
+        delete allObjects[kitchenCabinetUpper[i]];
+      }
+    }
+    var particleGroup = new ParticleGroup(particlesInGroup, groupCount, scene);
+    particleGroup.upperCabinetIndex = kitchenCabinetLower.length;
+    allGroups[groupCount] = particleGroup;
+    groupCount++;
+
+    particleGroup.movePosition(0, 0);
+
+  }
+  randomizeLarge();
+
+  
+}
+
+function randomizeLarge() {
+
+  var allParticlesAndGroups = getParticlesAndGroupsInScene();
+
+    //groups
+  Object.keys(allGroups).forEach(function(key) {
+    allGroups[key].randomizePosition(allParticlesAndGroups);
+    for (var i = 0; i < allGroups[key].particlesList.length; i++) {
+      var current = allGroups[key].particlesList[i].obj.position;
+      var target = allGroups[key].particlesList[i].target;
+      var obj = allGroups[key].particlesList[i].obj;
+      var tween = new TWEEN.Tween(current).to(target, 1500);
+      tween.easing(TWEEN.Easing.Elastic.InOut);
+      tween.onUpdate(function() {
+        obj.position.x = current.x;
+        obj.position.z = current.z;
+      })
+      var tween1 = new TWEEN.Tween(allGroups[key].particlesList[i].obj.rotation).to({y: allGroups[key].particlesList[i].targetRotation.y}, 1000);
+      var particle = allGroups[key].particlesList[i];
+      tween1.onComplete(function() {
+        particle.obj.rotation.y = particle.targetRotation.y;
+        particle.testObj.rotation.y = particle.obj.rotation.y;
+      });
+      tween.chain(tween1);
+      tween.start();
+    }
+  })
+
+
+  allProps = [];
+
+  var i = 0;
+  Object.keys(allObjects).forEach(function(key) {
+    //objects not in group      
+    var particle = allObjects[key];
+    if (particle.obj.userData.prop) {
+      allProps.push(particle);
+    } else {
+      particle.randomizePosition(allParticlesAndGroups, particle.obj.userData.wall, particle.obj.userData.prop);
+      var current = allObjects[key].obj.position;
+      var target = allObjects[key].target;
+
+      var tween = new TWEEN.Tween(current).to(target, 1500);
+      tween.easing(TWEEN.Easing.Elastic.InOut);
+      tween.onUpdate(function() {
+        allObjects[key].obj.position.x = current.x;          
+        allObjects[key].obj.position.z = current.z;
+      });
+
+      var tween1 = new TWEEN.Tween(allObjects[key].obj.rotation).to({y: allObjects[key].targetRotation.y}, 1000);
+      tween1.onComplete(function() {
+         allObjects[key].obj.rotation.y = allObjects[key].targetRotation.y;
+        allObjects[key].testObj.rotation.y = allObjects[key].obj.rotation.y;
+      });
+      tween.chain(tween1);
+      tween.start();
+
+      //randomize props on completion of tween animation
+      if (i == 0) {
+        tween1.onComplete(function() {
+          randomizeProps();
+        })
+      }
+      i++;
+    }
+    
+  })
+
+}
+
+function randomizeProps() {
+   //props
+    var allParticles = getAllParticles();
+    for (var i = 0; i < allProps.length; i++) {        
+      var surfaceId = allProps[i].randomizePosition(allParticles, allProps[i].obj.userData.wall, allProps[i].obj.userData.prop);
+      var current = allProps[i].obj.position;
+      var target = allProps[i].target;
+      var tween = new TWEEN.Tween(current).to(target, 1500);
+      var obj = allProps[i].obj;
+      var prop = allProps[i];
+      tween.easing(TWEEN.Easing.Elastic.InOut);
+      tween.onUpdate(function() {
+        prop.obj.position.x = current.x;
+        prop.obj.position.y = current.y;
+        prop.obj.position.z = current.z;
+      })
+      tween.start();
+    }
+}
+
 // called after the scene loads
 function onLoad(framework) {
   var scene = framework.scene;
@@ -79,7 +347,7 @@ function onLoad(framework) {
   camera.lookAt(new THREE.Vector3(0,0,0));
   scene.add(camera);
 
-  //axes helper (x = red, y = green, z = blue)
+  // //axes helper (x = red, y = green, z = blue)
   // var axesHelper = new THREE.AxesHelper(5);
   // scene.add(axesHelper);
 
@@ -91,22 +359,6 @@ function onLoad(framework) {
   directionalLight.position.set( 0, 0, 1 ).normalize();
   scene.add( directionalLight );
 
-
-  // initialize a simple box and material
-  // var box = new THREE.BoxGeometry(1, 1, 1);
-
-  // var adamMaterial = new THREE.ShaderMaterial({
-  //   uniforms: {
-  //     image: { // Check the Three.JS documentation for the different allowed types and values
-  //       type: "t", 
-  //       value: THREE.ImageUtils.loadTexture('./adam.jpg')
-  //     }
-  //   },
-  //   vertexShader: require('./shaders/adam-vert.glsl'),
-  //   fragmentShader: require('./shaders/adam-frag.glsl')
-  // });
-  // var adamCube = new THREE.Mesh(box, material);
-
   var material = new THREE.MeshLambertMaterial({color: 0x808080});
   var material2 = new THREE.MeshLambertMaterial({color: 0xFFFFFF});
 
@@ -117,29 +369,29 @@ function onLoad(framework) {
   });
 
   //add ground plane
-  var groundGeo = new THREE.PlaneGeometry(5, 3, 3);
+  var groundGeo = new THREE.PlaneGeometry(4, 3, 3);
   var ground = new THREE.Mesh(groundGeo, material);
   ground.rotateX(-Math.PI / 2);
   ground.translateZ(-0.5);
   scene.add(ground);
 
   //add walls
-  var rightWallGeo = new THREE.PlaneGeometry(5, 1, 3);
+  var rightWallGeo = new THREE.PlaneGeometry(4, 1, 3);
   var rightWall = new THREE.Mesh(rightWallGeo, material);
   rightWall.translateZ(-1.5);
   scene.add(rightWall);
   var leftWallGeo = new THREE.PlaneGeometry(3, 1, 3);
   var leftWall = new THREE.Mesh(leftWallGeo, material);
-  leftWall.translateX(-2.5);
+  leftWall.translateX(-2);
   leftWall.rotateY(Math.PI / 2);
   scene.add(leftWall);
-  var rightWallGeo1 = new THREE.PlaneGeometry(5, 1, 3);
+  var rightWallGeo1 = new THREE.PlaneGeometry(4, 1, 3);
   var rightWall1 = new THREE.Mesh(rightWallGeo1, material);
   rightWall1.translateZ(1.5);
   scene.add(rightWall1);
   var leftWallGeo1 = new THREE.PlaneGeometry(3, 1, 3);
   var leftWall1 = new THREE.Mesh(leftWallGeo1, material);
-  leftWall1.translateX(2.5);
+  leftWall1.translateX(2);
   leftWall1.rotateY(Math.PI / 2);
   scene.add(leftWall1);
 
@@ -220,7 +472,6 @@ function onLoad(framework) {
   const objects = new THREE.Group();
   var objNameCount = 0;
   const onLoad = (function(loadedObj) {
-    console.log(loadedObj);
     loadedObj.userData.clickable = true;
     loadedObj.userData.selected = false;
     //user id is 1 + the greatest userid in the current objects list
@@ -235,20 +486,52 @@ function onLoad(framework) {
     } else {
       loadedObj.userData.name = loadedObj.children[0].name;
     }
-    console.log("what is name: " + loadedObj.userData.name);
     //check if object should be near a wall 
-    if (loadedObj.userData.name.indexOf("bed") != -1 || loadedObj.userData.name.indexOf("desk") != -1
-      || loadedObj.userData.name.indexOf("bookcase") != -1 || loadedObj.userData.name.indexOf("floor_lamp_round") != -1) {
+    if (loadedObj.userData.name.includes("bed") || loadedObj.userData.name.includes("desk")
+      || loadedObj.userData.name.includes("bookcase") || loadedObj.userData.name.includes("floor_lamp_round") 
+      || loadedObj.userData.name.includes("Fridge") || loadedObj.userData.name.includes("trashcan")) {
       loadedObj.userData.wall = true;
     } else {
       loadedObj.userData.wall = false;
     }
 
-    if (loadedObj.userData.name.indexOf("laptop") != -1 || loadedObj.userData.name.indexOf("radio") != -1 || loadedObj.userData.name.indexOf("table_lamp_round") != -1) {
+    //props
+    if (loadedObj.userData.name.includes("laptop") || loadedObj.userData.name.includes("radio") || loadedObj.userData.name.includes("table_lamp_round")
+    || loadedObj.userData.name.includes("CoffeeMachine") || loadedObj.userData.name.includes("toaster") || loadedObj.userData.name.includes("Blender")
+    || loadedObj.userData.name.includes("Microwave")) {
       loadedObj.userData.prop = true;
     } else {
       loadedObj.userData.prop = false;
     }
+
+    //kitchencabinet
+    if (loadedObj.userData.name.includes('kitchenCabinet')) {
+      loadedObj.userData.wall = true;
+      if (loadedObj.userData.name.includes('Upper')) {
+        loadedObj.userData.cabinet = 'upper';
+        if (!loadedObj.userData.name.includes('Corner')) {
+          kitchenCabinetUpper.push(loadedObj.userData.id);
+        } else {
+          kitchenCabinetUpperCornerId = loadedObj.userData.id;
+        }
+      } else {
+        loadedObj.userData.cabinet = 'lower';
+        if (!loadedObj.userData.name.includes('Corner')) {
+          kitchenCabinetLower.push(loadedObj.userData.id);
+        } else {
+          if (loadedObj.userData.name.includes('Round')) {
+            kitchenCabinetLowerCornerRoundId = loadedObj.userData.id;
+          } else if (loadedObj.userData.name.includes('Inner')) {
+            kitchenCabinetLowerCornerInnerId = loadedObj.userData.id;
+          }
+        }
+      }
+    }
+    else if (loadedObj.userData.name.includes('kitchenSink') || loadedObj.userData.name.includes('kitchenStove')) {
+      loadedObj.userData.wall = true;
+      kitchenCabinetLower.push(loadedObj.userData.id);
+    }
+
     var particle = new Particle(0, loadedObj);
     objects.add(loadedObj);
     allObjects[loadedObj.userData.id] = particle;
@@ -264,7 +547,7 @@ function onLoad(framework) {
   btnAddObjects.addEventListener("click", function(e) {
     for (var i = 0; i < listBox2.length; i++) {
       var objName = listBox2.options[i].text;
-      var objPath = "./obj_files2/" + objName.toLowerCase() + ".obj";
+      var objPath = "./obj_files/" + objName.toLowerCase() + ".obj";
       var objPromise = OBJPromiseLoader.load(objPath).then(onLoad).catch(onError);
     }
 
@@ -275,105 +558,55 @@ function onLoad(framework) {
     scene.add(objects);
   })
 
+
   //add "select object" option to gui
   var selectObjects = { add:function(){ 
+    var select = document.getElementById("objectSelect");
+    select.options.length = 0;
+    var selected = document.getElementById('objectsSelected');
+    selected.options.length = 0;
+    var options = ['Table', 'Chair', 'Coffee_Table', 'Single_Bed', 'Desk', 'Bed_Drawer', 'Bookcase_Closed_Wide', 'Floor_Lamp_Round', 
+    'Rug_Rounded', 'Laptop_Prop', 'Radio_Prop', 'Table_Lamp_Round_Prop']
+    options.forEach(function(element, key) {
+      select[key] = new Option(element, key);
+    })
     selectionModal.style.display = "block";
 
   }};
   gui.add(selectObjects,'add').name("Select Objects");
 
 
-  // //select props
-  // var selectProps = { add:function() {
-  //   document.theForm.menu1.options.length = 0;
-  //   document.theForm.menu1.options[0] = new Option("Laptop_Prop", 0, false, false);
-  //   document.theForm.menu1.options[1] = new Option("Radio_Prop", 0, false, false);
-  //   document.theForm.menu1.options[2] = new Option("Table_Lamp_Round_Prop", 0, false, false);
-  //   selectionModal.style.display = "block";
-  // }}
-  // gui.add(selectProps,'add').name("Select Props");
+  //add "select object" option to gui
+  var selectKitchen = { add:function(){ 
+    var select = document.getElementById("objectSelect");
+    select.options.length = 0;
+    var selected = document.getElementById('objectsSelected');
+    selected.options.length = 0;
+    var options = ['Chair', 'Kitchen_Blender_Prop', 'Kitchen_Cabinet', 'Kitchen_Cabinet_Corner_Inner',
+    'Kitchen_Cabinet_Corner_Round', 'Kitchen_Cabinet_Upper', 'Kitchen_Cabinet_Upper_Corner', 'Kitchen_Cabinet_Upper_Double',
+    'Kitchen_Cabinet_Upper_Low', 'Kitchen_Coffee_Machine_Prop', 'Kitchen_Fridge_Large', 'Kitchen_Microwave_Prop', 'Kitchen_Sink', 'Kitchen_Stove',
+    'Table_Round', 'Toaster_Prop', 'Trashcan'];
+    options.forEach(function(element, key) {
+      select[key] = new Option(element, key);
+    })
+    selectionModal.style.display = "block";
+
+  }};
+  gui.add(selectKitchen,'add').name("Select Kitchen");
 
 
-  //TESTING
   var randomize = {add:function() {
-    var allParticlesAndGroups = getParticlesAndGroupsInScene();
-
-    allProps = [];
-
-
-    Object.keys(allObjects).forEach(function(key) {
-      //objects not in group      
-      var particle = allObjects[key];
-      if (particle.obj.userData.prop) {
-        allProps.push(particle);
-      } else {
-        particle.randomizePosition(allParticlesAndGroups, particle.obj.userData.wall, particle.obj.userData.prop);
-        var current = allObjects[key].obj.position;
-        var target = allObjects[key].target;
-        var tween = new TWEEN.Tween(current).to(target, 2000);
-        tween.easing(TWEEN.Easing.Elastic.InOut);
-        tween.onUpdate(function() {
-          allObjects[key].obj.position.x = current.x;
-          allObjects[key].obj.position.z = current.z;
-        });
-        tween.start();
-      }
-      
-    })
-    //groups
-    Object.keys(allGroups).forEach(function(key) {
-      allGroups[key].randomizePosition(allParticlesAndGroups);
-      console.log("particleslist should be 2: " + allGroups[key].particlesList.length);
-      for (var i = 0; i < allGroups[key].particlesList.length; i++) {
-        var current = allGroups[key].particlesList[i].obj.position;
-        var target = allGroups[key].particlesList[i].target;
-        console.log("grouping curr: " + current.x + ", " + current.y + ", " + current.z)
-        console.log("grouping target: " + target.x + ", " + target.y + ", " + target.z);
-        var obj = allGroups[key].particlesList[i].obj;
-        // allGroups[key].particlesList[i].obj.position.x = target.x;
-        // allGroups[key].particlesList[i].obj.position.z = target.z;
-        var tween = new TWEEN.Tween(current).to(target, 2000);
-        tween.easing(TWEEN.Easing.Elastic.InOut);
-        tween.onUpdate(function() {
-          obj.position.x = current.x;
-          obj.position.z = current.z;
-        })
-        tween.start();
-      }
-    })
-
+     //randomizeLarge();
+     randomizeCabinets(scene);
   }}
   gui.add(randomize,'add').name("randomize positions");
-
-  var randomizeProps = {add:function() {
-     //props
-    var allParticles = getAllParticles();
-    for (var i = 0; i < allProps.length; i++) {        
-      allProps[i].randomizePosition(allParticles, allProps[i].obj.userData.wall, allProps[i].obj.userData.prop);
-      var current = allProps[i].obj.position;
-      var target = allProps[i].target;
-      var tween = new TWEEN.Tween(current).to(target, 2000);
-      var obj = allProps[i].obj;
-      tween.easing(TWEEN.Easing.Elastic.InOut);
-      tween.onUpdate(function() {
-        obj.position.x = current.x;
-        obj.position.y = current.y;
-        obj.position.z = current.z;
-      })
-      tween.start();
-    }
-  }}
-  gui.add(randomizeProps, 'add').name("randomize props")
 
   ///apply pairwise distance constraint
   var btnApplyPairwise = document.getElementById("applyDistance");
   btnApplyPairwise.addEventListener("click", function(e) {
     var x = document.getElementById("distanceInput").value;
     var objectsList = getAllSelected()
-    console.log(objectsList);
     if (objectsList.length >= 2) {
-      //IF OBJ IS IN A GROUP, THEN IT'S NOT IN THE ALLOBJECTSLIST; a and b are either single objects or groups
-      
       var result = getPair(objectsList);
       var a = result[0];
       var atype = result[1];
@@ -456,44 +689,14 @@ function onLoad(framework) {
       var b = result[2];
       var btype = result[3];
 
-
-      // var a = allObjects[objectsList[0]]; //particle
-      // var b = allObjects[objectsList[1]];
-
       var pairwise = new PairwiseOrientationConstraint(a, atype, b, btype);
       var solved = pairwise.solve(true);
-
-      // if (solved == false) {
-      //   //if not solved, we only mmove tween 1;
-      //   // console.log("does a have rotation: " + a.obj.rotation.x + ", " + a.obj.rotation.y + ", " + a.obj.rotation.z);
-      //   // console.log("a target rotation: " + a.targetRotation.x + ", " + a.targetRotation.y + ", " + a.targetRotation.z);
-      //   var tween;
-      //   if atype == "object" {
-      //     tween = new TWEEN.Tween(a.obj.rotation).to({y: a.targetRotation.y}, 1000).start();
-      //   } else {
-      //     tween = new TWEEN.Tween()
-      //   }
-        
-      //   tween.onComplete(function() {
-      //     // console.log("perpendicular so solve again");
-      //     pairwise.solve(false);
-      //     var tween1 = new TWEEN.Tween(a.obj.rotation).to({y: a.targetRotation.y}, 1000);
-      //     tween1.start().onComplete(function() {
-      //       a.testObj.rotation.y = a.obj.rotation.y;
-      //     });
-      //     var tween2 = new TWEEN.Tween(b.obj.rotation).to({y: b.targetRotation.y}, 1000);
-      //     tween2.start().onComplete(function() {
-      //       b.testObj.rotation.y = b.obj.rotation.y;
-      //     });
-      //   })
-      // } else {
         if (atype == "object") {
           var tween1 = new TWEEN.Tween(a.obj.rotation).to({y: a.targetRotation.y}, 1000);
           tween1.start().onComplete(function() {
             a.testObj.rotation.y = a.obj.rotation.y;
           });
         } else if (atype == "group") {
-          console.log("length of list: " + a.particlesList.length);
           for (var i = 0; i < a.particlesList.length; i++) {
             var aparticle = a.particlesList[i];
             var aObj = a.particlesList[i].obj;
@@ -524,7 +727,6 @@ function onLoad(framework) {
           });
         } else if (btype == "group") {
           for (var i = 0; i < b.particlesList.length; i++) {
-            console.log("lenght of blist: " + b.particlesList.length);
             var bparticle = b.particlesList[i];
             var bObj = b.particlesList[i].obj;
             var bTestObj = b.particlesList[i].testObj;
@@ -546,15 +748,6 @@ function onLoad(framework) {
           }
         }
 
-        // var tween2 = new TWEEN.Tween(b.obj.rotation).to({y: b.targetRotation.y}, 1000);
-        // tween2.start().onComplete(function() {
-        //   b.testObj.rotation.y = b.obj.rotation.y;
-        // });
-
-        // console.log("is solved?: " + solved);
-
-      
-
     }
   }}
 
@@ -570,33 +763,14 @@ function onLoad(framework) {
         particlesInGroup.push(allObjects[objectsList[i]]);
         allGroupedParticles[objectsList[i]] = allObjects[objectsList[i]]; 
         //delete from allobjects list because it's now in a group
-        delete allObjects[objectsList[i]];
+        if (objectsList[i] in allObjects) {
+          delete allObjects[objectsList[i]];
+        }
       }
     }
 
 
-    // //if group, make objects in group one apart from each other
-    // for (var i = 0; i < particlesInGroup.length; i++) {
-    //   for (var j = i + 1; j < particlesInGroup.length; j++) {
-    //         var pairwise = new PairwiseDistanceConstraint(particlesInGroup[i], "object", particlesInGroup[j], "object", 1  );
-    //         pairwise.solve(scene);
-    //   }
-    // }
-    // for (var i = 0; i < particlesInGroup.length; i++) {
-    //   var a = particlesInGroup[i];
-    //   var current1 = a.obj.position;
-    //   var tween1 = new TWEEN.Tween(current1).to(a.target, 2000);
-    //   tween1.easing(TWEEN.Easing.Elastic.InOut);
-    //   tween1.onUpdate(function() {
-    //     a.obj.position.x = current1.x;
-    //     a.obj.position.z = current1.z;
-    //   });
-    //   tween1.start();
-    // }
-
     var particleGroup = new ParticleGroup(particlesInGroup, groupCount, scene);
-    console.log("group position: " + particleGroup.testGroup.position.x + ", " + particleGroup.testGroup.position.y + ", " + 
-      particleGroup.testGroup.position.z);
     // var boxhelper = new THREE.BoxHelper(particleGroup.testGroup, 0xffff00);
     // scene.add(boxhelper);
     allGroups[groupCount] = particleGroup;
@@ -638,9 +812,7 @@ function getPair(objectsList) {
     //if the id of the first object in the returned list isn't in objectslist, then must be an object that's part of a group
     //get the object from the list of objects in groups, then get the particlegroup that contains all the objects in the group
     var groupedObject = allGroupedParticles[objectsList[0]];
-    console.log("groupedObjecta: " + groupedObject.obj.userData.group);
     aGroup = groupedObject.obj.userData.group;
-    console.log("what is allGroups: " + Object.keys(allGroups));
     a = allGroups[aGroup];
     atype = "group"
   } 
@@ -649,7 +821,6 @@ function getPair(objectsList) {
     //all other selected objects will either be another object, an object in the same group as a, or an object in a different group than a
     //break if it's another object or an object in a different group than a
     if (objectsList[i] in allObjects) {
-      console.log("b is an object")
       b = allObjects[objectsList[i]];
       btype = "object";
       break;
@@ -662,9 +833,6 @@ function getPair(objectsList) {
           break;
         }
       } else if (atype == "object") {
-
-        console.log("groupedObjectb: " + groupedObject.obj.userData.group);
-        console.log("what is allGroups: " + Object.keys(allGroups));
         b = allGroups[groupedObject.obj.userData.group];
         btype = "group";
         break;
@@ -685,18 +853,33 @@ function onUpdate(framework, t) {
     clearObjects = false;
   }
   TWEEN.update();
-
-
-
 }
 
-// when the scene is done initializing, it will call onLoad, then on frame updates, call onUpdate
+//arrow key to adjust position
+document.addEventListener("keydown", onDocumentKeyDown, false);
+function onDocumentKeyDown(event) {
+  var keyCode = event.which;
+  var selectedObjectsIDs = getAllSelected();//get user ids of all selected objects
+  //check allObjects and allGroupedParticles
+  for (var i = 0; i < selectedObjectsIDs.length; i++) {
+    var id = selectedObjectsIDs[i];
+    if (id in allObjects) {
+      var obj = allObjects[id];
+    } else if (id in allGroupedParticles) {
+      var obj = allGroupedParticles[id]
+    }
+
+     if (keyCode == 49) { //up
+        obj.updatePosition("z", 0.1);
+    } else if (keyCode == 50) { //down
+        obj.updatePosition("z", -0.1);
+    } else if (keyCode == 51) { //left
+        obj.updatePosition("x", 0.1);
+    } else if (keyCode == 52) { //right
+        obj.updatePosition("x", -0.1);
+    }
+
+  }
+}
+
 Framework.init(onLoad, onUpdate);
-
-// console.log('hello world');
-
-// console.log(Noise.generateNoise());
-
-// Noise.whatever()
-
-// console.log(other())\
